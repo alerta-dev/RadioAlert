@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estaciones de Radio Ficticias</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .station-container {
+            position: relative;
+            margin: 0 auto;
+            width: 300px;
+        }
+        
+        .album-image {
+            width: 300px;
+            height: 300px;
+            background-color: #333;
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .album-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            width: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .nav-button {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .song-info {
+            font-size: 12px;
+            margin-top: 5px;
+            min-height: 15px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .controls {
+            margin-top: 20px;
+        }
+        
+        .volume-control {
+            width: 200px;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+        }
+        
+        .volume-control input {
+            width: 150px;
+            margin-left: 10px;
+            accent-color: white;
+        }
+        
+        .volume-label {
+            margin-right: 10px;
+        }
+        
+        .station-title {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .play-button {
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        .play-button:hover {
+            background-color: white;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Estaciones de Radio Ficticias</h1>
+        
+        <div class="station-container">
+            <div class="album-image">
+                <img id="currentAlbum" src="/api/placeholder/300/300" alt="Imagen de álbum">
+            </div>
+            
+            <div class="navigation">
+                <button class="nav-button" id="prevButton">◀</button>
+                <button class="nav-button" id="nextButton">▶</button>
+            </div>
+            
+            <div class="station-title" id="stationName">Cargando estación...</div>
+            <div class="song-info" id="songInfo">...</div>
+            
+            <div class="controls">
+                <button class="play-button" id="playPauseButton">Reproducir</button>
+                <div class="volume-control">
+                    <span class="volume-label">Vol:</span>
+                    <input type="range" id="volumeControl" min="0" max="100" value="70">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        // Configuración de estaciones (puedes agregar más según sea necesario)
+        const stations = [
+            {
+                name: "Rock Clásico",
+                image: "/api/placeholder/300/300",
+                songs: [
+                    { title: "Rock Clásico - Canción 1", url: "https://example.com/song1.mp3" },
+                    { title: "Rock Clásico - Canción 2", url: "https://example.com/song2.mp3" },
+                    { title: "Rock Clásico - Canción 3", url: "https://example.com/song3.mp3" }
+                ]
+            },
+            {
+                name: "Jazz Lounge",
+                image: "/api/placeholder/300/300",
+                songs: [
+                    { title: "Jazz Lounge - Canción 1", url: "https://example.com/jazz1.mp3" },
+                    { title: "Jazz Lounge - Canción 2", url: "https://example.com/jazz2.mp3" },
+                    { title: "Jazz Lounge - Canción 3", url: "https://example.com/jazz3.mp3" }
+                ]
+            },
+            {
+                name: "Electrónica",
+                image: "/api/placeholder/300/300",
+                songs: [
+                    { title: "Electrónica - Canción 1", url: "https://example.com/electro1.mp3" },
+                    { title: "Electrónica - Canción 2", url: "https://example.com/electro2.mp3" },
+                    { title: "Electrónica - Canción 3", url: "https://example.com/electro3.mp3" }
+                ]
+            }
+        ];
+
+        // Variables globales
+        let currentStationIndex = 0;
+        let currentSongIndex = 0;
+        let isPlaying = false;
+        let shuffledPlaylist = [];
+
+        // Elementos DOM
+        const audioPlayer = document.getElementById('audioPlayer');
+        const currentAlbum = document.getElementById('currentAlbum');
+        const stationName = document.getElementById('stationName');
+        const songInfo = document.getElementById('songInfo');
+        const playPauseButton = document.getElementById('playPauseButton');
+        const volumeControl = document.getElementById('volumeControl');
+        const prevButton = document.getElementById('prevButton');
+        const nextButton = document.getElementById('nextButton');
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStation(currentStationIndex);
+            
+            // Configurar el volumen inicial
+            audioPlayer.volume = volumeControl.value / 100;
+            
+            // Evento de finalización de canción
+            audioPlayer.addEventListener('ended', function() {
+                playNextSong();
+            });
+        });
+
+        // Control de reproducción
+        playPauseButton.addEventListener('click', function() {
+            if (isPlaying) {
+                audioPlayer.pause();
+                playPauseButton.textContent = 'Reproducir';
+            } else {
+                audioPlayer.play();
+                playPauseButton.textContent = 'Pausar';
+            }
+            isPlaying = !isPlaying;
+        });
+
+        // Control de volumen
+        volumeControl.addEventListener('input', function() {
+            audioPlayer.volume = this.value / 100;
+        });
+
+        // Navegación entre estaciones
+        prevButton.addEventListener('click', function() {
+            currentStationIndex = (currentStationIndex - 1 + stations.length) % stations.length;
+            loadStation(currentStationIndex);
+        });
+
+        nextButton.addEventListener('click', function() {
+            currentStationIndex = (currentStationIndex + 1) % stations.length;
+            loadStation(currentStationIndex);
+        });
+
+        // Función para cargar una estación
+        function loadStation(index) {
+            const station = stations[index];
+            currentAlbum.src = station.image;
+            stationName.textContent = station.name;
+            
+            // Crear una lista de reproducción aleatoria
+            shufflePlaylist(station.songs);
+            
+            // Cargar la primera canción
+            currentSongIndex = 0;
+            loadSong();
+        }
+
+        // Función para mezclar aleatoriamente la lista de reproducción
+        function shufflePlaylist(songs) {
+            shuffledPlaylist = [...songs];
+            for (let i = shuffledPlaylist.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledPlaylist[i], shuffledPlaylist[j]] = [shuffledPlaylist[j], shuffledPlaylist[i]];
+            }
+        }
+
+        // Función para cargar una canción
+        function loadSong() {
+            const song = shuffledPlaylist[currentSongIndex];
+            songInfo.textContent = song.title;
+            audioPlayer.src = song.url;
+            
+            if (isPlaying) {
+                audioPlayer.play();
+            }
+        }
+
+        // Función para reproducir la siguiente canción
+        function playNextSong() {
+            currentSongIndex = (currentSongIndex + 1) % shuffledPlaylist.length;
+            
+            // Si llegamos al final de la lista, mezclar de nuevo
+            if (currentSongIndex === 0) {
+                shufflePlaylist(stations[currentStationIndex].songs);
+            }
+            
+            loadSong();
+        }
+    </script>
+</body>
+</html>
